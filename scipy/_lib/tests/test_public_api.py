@@ -424,9 +424,17 @@ def test_private_but_present_deprecation(module_name, correct_module):
     for attr_name in module.__all__:
         # ensure attribute is present where the warning is pointing
         assert getattr(correct_import, attr_name, None) is not None
-        message = f"Please import `{attr_name}` from the `{import_name}`..."
-        with pytest.deprecated_call(match=message):
-            getattr(module, attr_name)
+        please_message = f"Please import `{attr_name}` from the `{import_name}`..."
+        if hasattr(module, attr_name):
+            with pytest.deprecated_call(match=please_message):
+                getattr(module, attr_name)
+        else:
+            # If the private module lists the attribute in __all__ but does not
+            # actually provide it, accessing it should raise an AttributeError
+            # informing that the module is deprecated.
+            dep_message = f"`{module_name}` is deprecated..."
+            with pytest.raises(AttributeError, match=dep_message):
+                getattr(module, attr_name)
 
     # Attributes that were not in `module_name` get an error notifying the user
     # that the attribute is not in `module_name` and that `module_name` is deprecated.
